@@ -1,7 +1,7 @@
 import { TopDownCamera } from './camera/TopDownCamera'
 import { SceneLights } from './world/SceneLights'
 import { Ground } from './world/Ground'
-import { DebugObjects } from './world/DebugObjects'
+import { MapLayout } from './world/MapLayout'
 
 export function GameScene() {
   return (
@@ -11,7 +11,7 @@ export function GameScene() {
       <TopDownCamera />
       <SceneLights />
       <Ground />
-      <DebugObjects />
+      <MapLayout />
     </>
   )
 }
