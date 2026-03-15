@@ -1,14 +1,34 @@
-import type { ControlPointData } from '../../shared/types/map'
+import { controlPointRules } from '../../shared/config/controlPointRules'
+import type { ControlPointOwner, ControlPointState } from '../../shared/types/map'
 
 type ControlPointProps = {
-  point: ControlPointData
+  point: ControlPointState
 }
+
+const ownerColors: Record<ControlPointOwner, string> = {
+  neutral: '#8f9aad',
+  player: '#5c8fff',
+  enemy: '#ff7f6d',
+}
+
+const contestedColor = '#ffd166'
+const progressBarWidth = 1.28
 
 export function ControlPoint({ point }: ControlPointProps) {
   const isResource = point.type === 'resource'
   const padColor = isResource ? '#1f3a36' : '#3a3020'
   const accentColor = isResource ? '#58d6b2' : '#ffd166'
   const detailColor = isResource ? '#b1fff0' : '#fff2b6'
+  const ownerColor = ownerColors[point.owner]
+  const captureProgressRatio = point.captureProgress / controlPointRules.captureProgressMax
+  const fillScale = Math.abs(captureProgressRatio)
+  const fillOffsetX = (captureProgressRatio * progressBarWidth) / 2
+  const progressColor =
+    point.captureProgress > 0
+      ? ownerColors.player
+      : point.captureProgress < 0
+        ? ownerColors.enemy
+        : ownerColor
 
   function renderVariant() {
     switch (point.variant) {
@@ -84,10 +104,56 @@ export function ControlPoint({ point }: ControlPointProps) {
 
   return (
     <group name={point.id} position={point.position}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <ringGeometry args={[point.captureRadius - 0.08, point.captureRadius, 48]} />
+        <meshBasicMaterial color={ownerColor} transparent opacity={0.5} />
+      </mesh>
+
       <mesh position={[0, 0.1, 0]} receiveShadow>
         <cylinderGeometry args={[1.05, 1.15, 0.2, 24]} />
         <meshStandardMaterial color={padColor} />
       </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.22, 0]}>
+        <ringGeometry args={[0.88, 1.02, 40]} />
+        <meshBasicMaterial color={ownerColor} transparent opacity={0.9} />
+      </mesh>
+
+      <group position={[0, 1.72, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+          <planeGeometry args={[progressBarWidth + 0.12, 0.22]} />
+          <meshBasicMaterial color="#10161f" transparent opacity={0.88} />
+        </mesh>
+
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <planeGeometry args={[0.02, 0.14]} />
+          <meshBasicMaterial color="#324152" transparent opacity={0.95} />
+        </mesh>
+
+        {fillScale > 0 ? (
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[fillOffsetX, 0.02, 0]}
+            scale={[fillScale, 1, 1]}
+          >
+            <planeGeometry args={[progressBarWidth, 0.1]} />
+            <meshBasicMaterial color={progressColor} />
+          </mesh>
+        ) : null}
+
+        {point.isContested ? (
+          <group position={[0, 0.03, 0.28]}>
+            <mesh rotation={[0, 0, Math.PI / 4]}>
+              <boxGeometry args={[0.08, 0.34, 0.08]} />
+              <meshBasicMaterial color={contestedColor} />
+            </mesh>
+            <mesh rotation={[0, 0, -Math.PI / 4]}>
+              <boxGeometry args={[0.08, 0.34, 0.08]} />
+              <meshBasicMaterial color={contestedColor} />
+            </mesh>
+          </group>
+        ) : null}
+      </group>
 
       {renderVariant()}
     </group>

@@ -1,5 +1,5 @@
 import { mapConfig } from '../../shared/config/mapConfig'
-import type { MapPosition } from '../../shared/types/map'
+import type { ControlPointState, MapPosition } from '../../shared/types/map'
 import { ControlPoint } from '../entities/ControlPoint'
 import { EnemyBase } from '../entities/EnemyBase'
 import { PlayerBase } from '../entities/PlayerBase'
@@ -70,7 +70,11 @@ function BoundaryBeacons() {
   )
 }
 
-export function MapLayout() {
+type MapLayoutProps = {
+  controlPoints: ControlPointState[]
+}
+
+export function MapLayout({ controlPoints }: MapLayoutProps) {
   return (
     <group name="map-layout">
       <MapMarkings />
@@ -78,7 +82,7 @@ export function MapLayout() {
       <BoundaryBeacons />
       <PlayerBase base={mapConfig.playerBase} />
       <EnemyBase base={mapConfig.enemyBase} />
-      {mapConfig.controlPoints.map((point) => (
+      {controlPoints.map((point) => (
         <ControlPoint key={point.id} point={point} />
       ))}
     </group>

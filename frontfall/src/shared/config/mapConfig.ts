@@ -30,6 +30,7 @@ function shufflePositions<T>(items: readonly T[]) {
 }
 
 const randomPointPositions = shufflePositions(controlPointSlots).slice(0, 4)
+const defaultCaptureRadius = 2.2
 
 export const mapConfig = {
   size: {
@@ -56,24 +57,28 @@ export const mapConfig = {
       type: 'unlock',
       variant: 'spire',
       position: randomPointPositions[0],
+      captureRadius: defaultCaptureRadius,
     },
     {
       id: 'unlock-vault',
       type: 'unlock',
       variant: 'vault',
       position: randomPointPositions[1],
+      captureRadius: defaultCaptureRadius,
     },
     {
       id: 'resource-crystal',
       type: 'resource',
       variant: 'crystal',
       position: randomPointPositions[2],
+      captureRadius: defaultCaptureRadius,
     },
     {
       id: 'resource-relay',
       type: 'resource',
       variant: 'relay',
       position: randomPointPositions[3],
+      captureRadius: defaultCaptureRadius,
     },
   ],
   props: [

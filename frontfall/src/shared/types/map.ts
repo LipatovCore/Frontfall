@@ -3,6 +3,7 @@ export type PointType = 'resource' | 'unlock'
 export type MapPosition = readonly [number, number, number]
 
 export type ControlPointVariant = 'spire' | 'crystal' | 'relay' | 'vault'
+export type ControlPointOwner = 'neutral' | 'player' | 'enemy'
 
 export type BaseEntityData = {
   id: string
@@ -14,6 +15,13 @@ export type ControlPointData = {
   position: MapPosition
   type: PointType
   variant: ControlPointVariant
+  captureRadius: number
+}
+
+export type ControlPointState = ControlPointData & {
+  owner: ControlPointOwner
+  captureProgress: number
+  isContested: boolean
 }
 
 export type GreyboxPropData = {

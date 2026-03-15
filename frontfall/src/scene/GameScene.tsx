@@ -1,19 +1,25 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
+import { mapConfig } from '../shared/config/mapConfig'
 import { initialEnemyUnits } from '../shared/config/enemyUnits'
 import { initialPlayerUnits } from '../shared/config/playerUnits'
-import type { MapPosition } from '../shared/types/map'
+import type { ControlPointState, MapPosition } from '../shared/types/map'
 import type { UnitData } from '../shared/types/unit'
 import { TopDownCamera } from './camera/TopDownCamera'
 import { CombatShots, type CombatShot } from './entities/CombatShots'
 import { CombatUnit } from './entities/PlayerUnit'
 import { assignGroupTargetPositions } from './systems/groupTargetPositions'
+import {
+  createInitialControlPointStates,
+  simulateControlPointCaptureStep,
+} from './systems/controlPointCapture'
 import { simulateUnitCombatStep, type UnitTargetMap } from './systems/unitCombat'
 import { SceneLights } from './world/SceneLights'
 import { Ground } from './world/Ground'
 import { MapLayout } from './world/MapLayout'
 
 const initialUnits: UnitData[] = [...initialPlayerUnits, ...initialEnemyUnits]
+const initialControlPoints = createInitialControlPointStates(mapConfig.controlPoints)
 const shotLifetimeSeconds = 0.08
 
 type ActiveCombatShot = CombatShot & {
@@ -26,16 +32,22 @@ function createInitialTargets(units: UnitData[]) {
 
 export function GameScene() {
   const [units, setUnits] = useState<UnitData[]>(initialUnits)
+  const [controlPoints, setControlPoints] = useState<ControlPointState[]>(initialControlPoints)
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
   const [unitTargets, setUnitTargets] = useState<UnitTargetMap>(() => createInitialTargets(initialUnits))
   const [shots, setShots] = useState<ActiveCombatShot[]>([])
   const unitsRef = useRef(units)
+  const controlPointsRef = useRef(controlPoints)
   const unitTargetsRef = useRef(unitTargets)
   const shotsRef = useRef(shots)
 
   useEffect(() => {
     unitsRef.current = units
   }, [units])
+
+  useEffect(() => {
+    controlPointsRef.current = controlPoints
+  }, [controlPoints])
 
   useEffect(() => {
     unitTargetsRef.current = unitTargets
@@ -63,6 +75,11 @@ export function GameScene() {
 
   useFrame((_, delta) => {
     const result = simulateUnitCombatStep(unitsRef.current, unitTargetsRef.current, delta)
+    const captureResult = simulateControlPointCaptureStep(
+      controlPointsRef.current,
+      result.units,
+      delta,
+    )
     const nextShots = shotsRef.current
       .map((shot) => ({
         ...shot,
@@ -91,6 +108,11 @@ export function GameScene() {
     ) {
       shotsRef.current = nextShots
       setShots(nextShots)
+    }
+
+    if (captureResult.changed) {
+      controlPointsRef.current = captureResult.controlPoints
+      setControlPoints(captureResult.controlPoints)
     }
 
     if (!result.changed) {
@@ -182,7 +204,7 @@ export function GameScene() {
       <TopDownCamera />
       <SceneLights />
       <Ground onGroundClick={handleGroundClick} />
-      <MapLayout />
+      <MapLayout controlPoints={controlPoints} />
       <CombatShots shots={shots} />
       {units.map((unit) => (
         <CombatUnit
