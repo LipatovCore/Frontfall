@@ -1,11 +1,11 @@
 import type { UnitData } from '../types/unit'
 
-export const initialPlayerUnits: UnitData[] = [
+export const initialEnemyUnits: UnitData[] = [
   {
-    id: 'player-unit-alpha',
-    team: 'player',
-    position: [-1.8, 0, 6.9],
-    moveSpeed: 4.6,
+    id: 'enemy-unit-rho',
+    team: 'enemy',
+    position: [-1.8, 0, -7.2],
+    moveSpeed: 0,
     stopDistance: 0.12,
     maxHealth: 100,
     currentHealth: 100,
@@ -15,10 +15,10 @@ export const initialPlayerUnits: UnitData[] = [
     attackCooldownRemaining: 0,
   },
   {
-    id: 'player-unit-bravo',
-    team: 'player',
-    position: [0, 0, 6.3],
-    moveSpeed: 4.6,
+    id: 'enemy-unit-sigma',
+    team: 'enemy',
+    position: [0, 0, -6.6],
+    moveSpeed: 0,
     stopDistance: 0.12,
     maxHealth: 100,
     currentHealth: 100,
@@ -28,10 +28,10 @@ export const initialPlayerUnits: UnitData[] = [
     attackCooldownRemaining: 0,
   },
   {
-    id: 'player-unit-charlie',
-    team: 'player',
-    position: [1.8, 0, 6.9],
-    moveSpeed: 4.6,
+    id: 'enemy-unit-tau',
+    team: 'enemy',
+    position: [1.8, 0, -7.2],
+    moveSpeed: 0,
     stopDistance: 0.12,
     maxHealth: 100,
     currentHealth: 100,

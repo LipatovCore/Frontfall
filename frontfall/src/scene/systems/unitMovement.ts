@@ -1,38 +1,46 @@
-import { Vector3 } from 'three'
 import type { MapPosition } from '../../shared/types/map'
-
-const targetVector = new Vector3()
-const moveDirection = new Vector3()
 
 export type UnitMovementResult = {
   arrived: boolean
+  position: MapPosition
 }
 
 export function moveUnitTowardsTarget(
-  currentPosition: Vector3,
+  currentPosition: MapPosition,
   targetPosition: MapPosition,
   deltaSeconds: number,
   moveSpeed: number,
   stopDistance: number,
 ): UnitMovementResult {
-  targetVector.set(targetPosition[0], currentPosition.y, targetPosition[2])
-  moveDirection.subVectors(targetVector, currentPosition)
-
-  const distanceToTarget = moveDirection.length()
+  const dx = targetPosition[0] - currentPosition[0]
+  const dz = targetPosition[2] - currentPosition[2]
+  const distanceToTarget = Math.hypot(dx, dz)
 
   if (distanceToTarget <= stopDistance) {
-    currentPosition.set(targetPosition[0], currentPosition.y, targetPosition[2])
-    return { arrived: true }
+    return {
+      arrived: true,
+      position: [targetPosition[0], currentPosition[1], targetPosition[2]],
+    }
   }
 
   const stepDistance = Math.min(moveSpeed * deltaSeconds, distanceToTarget)
-  moveDirection.normalize()
-  currentPosition.addScaledVector(moveDirection, stepDistance)
+  const directionX = dx / distanceToTarget
+  const directionZ = dz / distanceToTarget
+  const nextPosition: MapPosition = [
+    currentPosition[0] + directionX * stepDistance,
+    currentPosition[1],
+    currentPosition[2] + directionZ * stepDistance,
+  ]
 
   if (distanceToTarget - stepDistance <= stopDistance) {
-    currentPosition.set(targetPosition[0], currentPosition.y, targetPosition[2])
-    return { arrived: true }
+    return {
+      arrived: true,
+      position: [targetPosition[0], currentPosition[1], targetPosition[2]],
+    }
   }
 
-  return { arrived: false }
+  return {
+    arrived: false,
+    position: nextPosition,
+  }
 }
