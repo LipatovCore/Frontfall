@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { createInitialControlPointStates } from '../scene/systems/controlPointCapture'
+import { enemyAiConfig, planEnemyWaveQueue } from '../scene/systems/enemyAi'
 import { createInitialEconomyState } from '../scene/systems/manpowerEconomy'
 import {
   createInitialPlayerUnlockState,
@@ -8,6 +9,7 @@ import {
   syncPlayerUnlockState,
 } from '../scene/systems/playerUnlocks'
 import {
+  createDeploymentBatch,
   createPlayerDeploymentBatch,
   getPlayerReinforcementDefinition,
   queuePlayerWaveUnit,
@@ -45,15 +47,18 @@ export function AppShell() {
     createInitialControlPointStates(mapConfig.controlPoints),
   )
   const [waveQueue, setWaveQueue] = useState<WaveQueueItem[]>([])
+  const [enemyWaveQueue, setEnemyWaveQueue] = useState<WaveQueueItem[]>([])
   const [waveTimerSeconds, setWaveTimerSeconds] = useState(reinforcementConfig.waveIntervalSeconds)
   const [deploymentCycle, setDeploymentCycle] = useState(1)
-  const [deploymentBatch, setDeploymentBatch] = useState<DeploymentBatch | null>(null)
+  const [deploymentBatches, setDeploymentBatches] = useState<DeploymentBatch[]>([])
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null)
   const [playerUnlockState, setPlayerUnlockState] = useState<PlayerUnlockState>(() =>
     createInitialPlayerUnlockState(),
   )
   const economyStateRef = useRef(economyState)
   const waveQueueRef = useRef(waveQueue)
+  const enemyWaveQueueRef = useRef(enemyWaveQueue)
+  const enemyQueueTickElapsedRef = useRef(0)
 
   const selectionBoxStyle = getSelectionBoxStyle(selectionBox)
 
@@ -64,6 +69,10 @@ export function AppShell() {
   useEffect(() => {
     waveQueueRef.current = waveQueue
   }, [waveQueue])
+
+  useEffect(() => {
+    enemyWaveQueueRef.current = enemyWaveQueue
+  }, [enemyWaveQueue])
 
   useEffect(() => {
     setPlayerUnlockState((currentUnlockState) =>
@@ -78,6 +87,23 @@ export function AppShell() {
       const now = performance.now()
       const deltaSeconds = (now - lastTimestamp) / 1000
       lastTimestamp = now
+      enemyQueueTickElapsedRef.current += deltaSeconds
+
+      if (enemyQueueTickElapsedRef.current >= enemyAiConfig.queueIntervalSeconds) {
+        enemyQueueTickElapsedRef.current -= enemyAiConfig.queueIntervalSeconds
+
+        const queuePlan = planEnemyWaveQueue(
+          economyStateRef.current,
+          enemyWaveQueueRef.current,
+        )
+
+        if (queuePlan.queuedUnits > 0) {
+          economyStateRef.current = queuePlan.nextEconomyState
+          enemyWaveQueueRef.current = queuePlan.nextWaveQueue
+          setEconomyState(queuePlan.nextEconomyState)
+          setEnemyWaveQueue(queuePlan.nextWaveQueue)
+        }
+      }
 
       setWaveTimerSeconds((currentTimer) => {
         const nextTimer = currentTimer - deltaSeconds
@@ -88,14 +114,19 @@ export function AppShell() {
 
         setDeploymentCycle((currentCycle) => {
           const nextCycle = currentCycle + 1
-          const batch = createPlayerDeploymentBatch(waveQueueRef.current, currentCycle)
+          const nextDeploymentBatches = [
+            createPlayerDeploymentBatch(waveQueueRef.current, currentCycle),
+            createDeploymentBatch('enemy', enemyWaveQueueRef.current, currentCycle),
+          ].filter((batch): batch is DeploymentBatch => batch !== null)
 
-          if (batch) {
-            setDeploymentBatch(batch)
+          if (nextDeploymentBatches.length > 0) {
+            setDeploymentBatches(nextDeploymentBatches)
           }
 
           waveQueueRef.current = []
+          enemyWaveQueueRef.current = []
           setWaveQueue([])
+          setEnemyWaveQueue([])
 
           return nextCycle
         })
@@ -162,7 +193,7 @@ export function AppShell() {
         ) : null}
         <Canvas shadows dpr={[1, 1.5]}>
           <GameScene
-            deploymentBatch={deploymentBatch}
+            deploymentBatches={deploymentBatches}
             economyState={economyState}
             onEconomyStateChange={setEconomyState}
             onControlPointsChange={setControlPoints}
