@@ -5,6 +5,7 @@ type CombatUnitProps = {
   unit: UnitData
   isSelected: boolean
   onSelect: (unitId: string, shouldToggleSelection: boolean) => void
+  onEnemyTarget: (unitId: string) => void
 }
 
 const teamColors = {
@@ -22,16 +23,22 @@ const teamColors = {
   },
 } as const
 
-export function CombatUnit({ unit, isSelected, onSelect }: CombatUnitProps) {
+export function CombatUnit({ unit, isSelected, onSelect, onEnemyTarget }: CombatUnitProps) {
   const colors = teamColors[unit.team]
   const healthRatio = unit.currentHealth / unit.maxHealth
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation()
 
-    if (unit.team !== 'player') {
+    if (event.button !== 0) {
       return
     }
+
+    if (unit.team !== 'player') {
+      onEnemyTarget(unit.id)
+      return
+    }
+
     onSelect(unit.id, event.nativeEvent.shiftKey)
   }
 
