@@ -3,6 +3,7 @@ import type { UnitData } from '../types/unit'
 export const initialEnemyUnits: UnitData[] = [
   {
     id: 'enemy-unit-rho',
+    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [-1.8, 0, -7.2],
     moveSpeed: 0,
@@ -16,6 +17,7 @@ export const initialEnemyUnits: UnitData[] = [
   },
   {
     id: 'enemy-unit-sigma',
+    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [0, 0, -6.6],
     moveSpeed: 0,
@@ -29,6 +31,7 @@ export const initialEnemyUnits: UnitData[] = [
   },
   {
     id: 'enemy-unit-tau',
+    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [1.8, 0, -7.2],
     moveSpeed: 0,

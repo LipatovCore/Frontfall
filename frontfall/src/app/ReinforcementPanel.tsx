@@ -2,6 +2,7 @@ import { mapConfig } from '../shared/config/mapConfig'
 import { playerUnitUnlocks } from '../shared/config/playerUnlocks'
 import { reinforcementConfig } from '../shared/config/reinforcements'
 import { isPlayerUnitDefinitionUnlocked } from '../scene/systems/playerUnlocks'
+import { useState } from 'react'
 import type { EconomyState } from '../shared/types/economy'
 import type { WaveQueueItem } from '../shared/types/reinforcements'
 import type { PlayerUnlockState } from '../shared/types/unlocks'
@@ -31,6 +32,7 @@ export function ReinforcementPanel({
   waveTimerSeconds,
   onQueueUnit,
 }: ReinforcementPanelProps) {
+  const [infoUnitId, setInfoUnitId] = useState<string | null>(null)
   const queuedCounts = waveQueue.reduce<Record<string, number>>((counts, item) => {
     counts[item.definitionId] = (counts[item.definitionId] ?? 0) + 1
     return counts
@@ -61,21 +63,66 @@ export function ReinforcementPanel({
                 : 'Unlocked, insufficient manpower'
 
             return (
-              <button
-                key={definition.id}
-                type="button"
-                className={`reinforcement-button ${isUnlocked ? '' : 'reinforcement-button-locked'}`.trim()}
-                onClick={() => onQueueUnit(definition.id)}
-                disabled={!isUnlocked || !canAfford}
-              >
-                <span className="reinforcement-button-copy">
-                  <span className="reinforcement-button-title">
-                    <span>{definition.label}</span>
-                    <span>{definition.cost} MP</span>
-                  </span>
-                  <span className="reinforcement-button-state">{buttonLabel}</span>
-                </span>
-              </button>
+              <div key={definition.id} className="reinforcement-unit-entry">
+                <div className="reinforcement-unit-actions">
+                  <button
+                    type="button"
+                    className={`reinforcement-button ${isUnlocked ? '' : 'reinforcement-button-locked'}`.trim()}
+                    onClick={() => onQueueUnit(definition.id)}
+                    disabled={!isUnlocked || !canAfford}
+                  >
+                    <span className="reinforcement-button-copy">
+                      <span className="reinforcement-button-title">
+                        <span>{definition.label}</span>
+                        <span>{definition.cost} MP</span>
+                      </span>
+                      <span className="reinforcement-button-state">{buttonLabel}</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="reinforcement-info-button"
+                    aria-label={`Unit info: ${definition.label}`}
+                    aria-expanded={infoUnitId === definition.id}
+                    onClick={() =>
+                      setInfoUnitId((currentInfoUnitId) =>
+                        currentInfoUnitId === definition.id ? null : definition.id,
+                      )
+                    }
+                  >
+                    i
+                  </button>
+                </div>
+
+                {infoUnitId === definition.id ? (
+                  <div className="reinforcement-info-panel">
+                    <p className="reinforcement-info-copy">{definition.description}</p>
+                    <dl className="reinforcement-stats">
+                      <div>
+                        <dt>HP</dt>
+                        <dd>{definition.template.maxHealth}</dd>
+                      </div>
+                      <div>
+                        <dt>DMG</dt>
+                        <dd>{definition.template.attackDamage}</dd>
+                      </div>
+                      <div>
+                        <dt>Range</dt>
+                        <dd>{definition.template.attackRange}</dd>
+                      </div>
+                      <div>
+                        <dt>CD</dt>
+                        <dd>{definition.template.attackCooldown}s</dd>
+                      </div>
+                      <div>
+                        <dt>Speed</dt>
+                        <dd>{definition.template.moveSpeed}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : null}
+              </div>
             )
           })}
         </div>

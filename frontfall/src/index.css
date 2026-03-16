@@ -154,6 +154,17 @@ canvas {
   gap: 8px;
 }
 
+.reinforcement-unit-entry {
+  display: grid;
+  gap: 6px;
+}
+
+.reinforcement-unit-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 8px;
+}
+
 .reinforcement-button {
   display: block;
   width: 100%;
@@ -164,6 +175,21 @@ canvas {
   color: #dce7f5;
   font: inherit;
   cursor: pointer;
+}
+
+.reinforcement-info-button {
+  border: 1px solid rgba(148, 171, 205, 0.24);
+  border-radius: 8px;
+  background: rgba(17, 29, 45, 0.92);
+  color: #dce7f5;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reinforcement-info-button:hover {
+  border-color: rgba(127, 214, 255, 0.55);
+  background: rgba(24, 38, 58, 0.98);
 }
 
 .reinforcement-button-copy,
@@ -199,6 +225,45 @@ canvas {
 .reinforcement-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.reinforcement-info-panel {
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 171, 205, 0.14);
+  border-radius: 8px;
+  background: rgba(12, 19, 29, 0.8);
+}
+
+.reinforcement-info-copy {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #c7d6e8;
+}
+
+.reinforcement-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reinforcement-stats div {
+  min-width: 0;
+}
+
+.reinforcement-stats dt {
+  margin-bottom: 3px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #91a3bb;
+}
+
+.reinforcement-stats dd {
+  margin: 0;
+  font-size: 13px;
+  color: #dce7f5;
 }
 
 .reinforcement-empty {
@@ -240,5 +305,9 @@ canvas {
     bottom: 16px;
     left: 16px;
     width: auto;
+  }
+
+  .reinforcement-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

@@ -4,6 +4,7 @@ export type UnitTeam = 'player' | 'enemy'
 
 export type UnitData = {
   id: string
+  unitTypeId: string
   team: UnitTeam
   position: MapPosition
   moveSpeed: number

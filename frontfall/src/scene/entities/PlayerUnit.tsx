@@ -23,6 +23,96 @@ const teamColors = {
   },
 } as const
 
+function renderPlayerUnitModel(unitTypeId: string, colors: (typeof teamColors)['player']) {
+  switch (unitTypeId) {
+    case 'player-heavy-unit':
+      return (
+        <>
+          <mesh position={[0, 0.18, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.48, 0.58, 0.24, 20]} />
+            <meshStandardMaterial color={colors.hull} />
+          </mesh>
+          <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.92, 0.28, 1.18]} />
+            <meshStandardMaterial color={colors.accent} />
+          </mesh>
+          <mesh position={[0, 0.58, -0.14]} castShadow>
+            <boxGeometry args={[0.44, 0.18, 0.54]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[0.42, 0.3, 0.18]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.08, 0.42, 4, 10]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[-0.42, 0.3, 0.18]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.08, 0.42, 4, 10]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[0, 0.68, 0.36]} castShadow>
+            <boxGeometry args={[0.14, 0.14, 0.54]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+        </>
+      )
+
+    case 'player-scout-unit':
+      return (
+        <>
+          <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.3, 0.34, 0.14, 18]} />
+            <meshStandardMaterial color={colors.hull} />
+          </mesh>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.56, 0.18, 0.78]} />
+            <meshStandardMaterial color={colors.accent} />
+          </mesh>
+          <mesh position={[0, 0.42, -0.08]} castShadow rotation={[0, Math.PI / 4, 0]}>
+            <boxGeometry args={[0.24, 0.12, 0.38]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[0.36, 0.28, 0.12]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.05, 0.34, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[-0.36, 0.28, 0.12]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.05, 0.34, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[0, 0.5, 0.26]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.04, 0.52, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+        </>
+      )
+
+    default:
+      return (
+        <>
+          <mesh position={[0, 0.16, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.38, 0.44, 0.18, 18]} />
+            <meshStandardMaterial color={colors.hull} />
+          </mesh>
+          <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.22, 0.9]} />
+            <meshStandardMaterial color={colors.accent} />
+          </mesh>
+          <mesh position={[0, 0.46, -0.08]} castShadow>
+            <boxGeometry args={[0.3, 0.14, 0.42]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+          <mesh position={[-0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+        </>
+      )
+  }
+}
+
 export function CombatUnit({ unit, isSelected, onSelect, onEnemyTarget }: CombatUnitProps) {
   const colors = teamColors[unit.team]
   const healthRatio = unit.currentHealth / unit.maxHealth
@@ -70,30 +160,36 @@ export function CombatUnit({ unit, isSelected, onSelect, onEnemyTarget }: Combat
         </mesh>
       </group>
 
-      <mesh position={[0, 0.16, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.38, 0.44, 0.18, 18]} />
-        <meshStandardMaterial color={colors.hull} />
-      </mesh>
+      {unit.team === 'player' ? renderPlayerUnitModel(unit.unitTypeId, teamColors.player) : null}
 
-      <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.7, 0.22, 0.9]} />
-        <meshStandardMaterial color={colors.accent} />
-      </mesh>
+      {unit.team === 'enemy' ? (
+        <>
+          <mesh position={[0, 0.16, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.38, 0.44, 0.18, 18]} />
+            <meshStandardMaterial color={colors.hull} />
+          </mesh>
 
-      <mesh position={[0, 0.46, -0.08]} castShadow>
-        <boxGeometry args={[0.3, 0.14, 0.42]} />
-        <meshStandardMaterial color={colors.detail} />
-      </mesh>
+          <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.7, 0.22, 0.9]} />
+            <meshStandardMaterial color={colors.accent} />
+          </mesh>
 
-      <mesh position={[0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
-        <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
-        <meshStandardMaterial color={colors.detail} />
-      </mesh>
+          <mesh position={[0, 0.46, -0.08]} castShadow>
+            <boxGeometry args={[0.3, 0.14, 0.42]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
 
-      <mesh position={[-0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
-        <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
-        <meshStandardMaterial color={colors.detail} />
-      </mesh>
+          <mesh position={[0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+
+          <mesh position={[-0.28, 0.29, 0.2]} castShadow rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
+            <meshStandardMaterial color={colors.detail} />
+          </mesh>
+        </>
+      ) : null}
 
       {unit.team === 'enemy' ? (
         <mesh position={[0, 0.62, 0.28]} castShadow>

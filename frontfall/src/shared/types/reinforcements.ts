@@ -4,6 +4,7 @@ import type { UnitData, UnitTeam } from './unit'
 export type ReinforcementUnitDefinition = {
   id: string
   label: string
+  description: string
   cost: number
   team: UnitTeam
   template: Omit<UnitData, 'id' | 'team' | 'position'>
