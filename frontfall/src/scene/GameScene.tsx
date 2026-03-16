@@ -12,6 +12,7 @@ import type { UnitData } from '../shared/types/unit'
 import { TopDownCamera } from './camera/TopDownCamera'
 import { CombatShots, type CombatShot } from './entities/CombatShots'
 import { CombatUnit } from './entities/PlayerUnit'
+import { enemyAiConfig, getEnemyAiMoveDecision } from './systems/enemyAi'
 import { assignGroupTargetPositions } from './systems/groupTargetPositions'
 import {
   createInitialControlPointStates,
@@ -45,7 +46,7 @@ function createInitialAttackTargets(units: UnitData[]) {
 }
 
 type GameSceneProps = {
-  deploymentBatch: DeploymentBatch | null
+  deploymentBatches: DeploymentBatch[]
   economyState: EconomyState
   onEconomyStateChange: Dispatch<SetStateAction<EconomyState>>
   onControlPointsChange: (nextControlPoints: ControlPointState[]) => void
@@ -53,7 +54,7 @@ type GameSceneProps = {
 }
 
 export function GameScene({
-  deploymentBatch,
+  deploymentBatches,
   economyState,
   onEconomyStateChange,
   onControlPointsChange,
@@ -74,7 +75,8 @@ export function GameScene({
   const attackTargetsRef = useRef(attackTargets)
   const shotsRef = useRef(shots)
   const economyStateRef = useRef(economyState)
-  const lastDeploymentBatchIdRef = useRef<number | null>(null)
+  const processedDeploymentBatchIdsRef = useRef<Set<string>>(new Set())
+  const enemyDecisionElapsedRef = useRef(0)
   const dragSelectionRef = useRef<{
     startWorld: MapPosition
     startScreen: ScreenPoint
@@ -107,17 +109,25 @@ export function GameScene({
   }, [economyState])
 
   useEffect(() => {
-    if (!deploymentBatch || deploymentBatch.id === lastDeploymentBatchIdRef.current) {
+    const nextDeploymentBatches = deploymentBatches.filter(
+      (batch) => !processedDeploymentBatchIdsRef.current.has(batch.id),
+    )
+
+    if (nextDeploymentBatches.length === 0) {
       return
     }
 
-    lastDeploymentBatchIdRef.current = deploymentBatch.id
-
     setUnits((currentUnits) => {
-      const spawnedUnits = createUnitsFromDeploymentBatch(deploymentBatch, currentUnits)
+      const spawnedUnits = nextDeploymentBatches.flatMap((batch) =>
+        createUnitsFromDeploymentBatch(batch, currentUnits),
+      )
 
       if (spawnedUnits.length === 0) {
         return currentUnits
+      }
+
+      for (const batch of nextDeploymentBatches) {
+        processedDeploymentBatchIdsRef.current.add(batch.id)
       }
 
       const nextUnits = [...currentUnits, ...spawnedUnits]
@@ -147,7 +157,7 @@ export function GameScene({
 
       return nextUnits
     })
-  }, [deploymentBatch])
+  }, [deploymentBatches])
 
   useEffect(() => {
     onControlPointsChange(controlPoints)
@@ -176,6 +186,22 @@ export function GameScene({
   }, [])
 
   useFrame((_, delta) => {
+    enemyDecisionElapsedRef.current += delta
+
+    if (enemyDecisionElapsedRef.current >= enemyAiConfig.decisionIntervalSeconds) {
+      enemyDecisionElapsedRef.current -= enemyAiConfig.decisionIntervalSeconds
+
+      const enemyDecision = getEnemyAiMoveDecision(unitsRef.current, controlPointsRef.current)
+
+      if (enemyDecision) {
+        setUnitTargets((currentTargets) => {
+          const nextTargets = { ...currentTargets, ...enemyDecision.unitTargetAssignments }
+          unitTargetsRef.current = nextTargets
+          return nextTargets
+        })
+      }
+    }
+
     const result = simulateUnitCombatStep(
       unitsRef.current,
       unitTargetsRef.current,

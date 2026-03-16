@@ -1,46 +1,29 @@
 import type { UnitData } from '../types/unit'
+import { enemyUnitDefinitions } from './enemyUnitDefinitions'
+
+const guardUnitTemplate = enemyUnitDefinitions.find((definition) => definition.id === 'enemy-guard-unit')?.template
+
+if (!guardUnitTemplate) {
+  throw new Error('Missing enemy guard unit definition.')
+}
 
 export const initialEnemyUnits: UnitData[] = [
   {
     id: 'enemy-unit-rho',
-    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [-1.8, 0, -7.2],
-    moveSpeed: 0,
-    stopDistance: 0.12,
-    maxHealth: 100,
-    currentHealth: 100,
-    attackRange: 2.35,
-    attackDamage: 12,
-    attackCooldown: 0.75,
-    attackCooldownRemaining: 0,
+    ...guardUnitTemplate,
   },
   {
     id: 'enemy-unit-sigma',
-    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [0, 0, -6.6],
-    moveSpeed: 0,
-    stopDistance: 0.12,
-    maxHealth: 100,
-    currentHealth: 100,
-    attackRange: 2.35,
-    attackDamage: 12,
-    attackCooldown: 0.75,
-    attackCooldownRemaining: 0,
+    ...guardUnitTemplate,
   },
   {
     id: 'enemy-unit-tau',
-    unitTypeId: 'enemy-guard-unit',
     team: 'enemy',
     position: [1.8, 0, -7.2],
-    moveSpeed: 0,
-    stopDistance: 0.12,
-    maxHealth: 100,
-    currentHealth: 100,
-    attackRange: 2.35,
-    attackDamage: 12,
-    attackCooldown: 0.75,
-    attackCooldownRemaining: 0,
+    ...guardUnitTemplate,
   },
 ]

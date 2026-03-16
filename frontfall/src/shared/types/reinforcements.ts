@@ -16,7 +16,7 @@ export type WaveQueueItem = {
 }
 
 export type DeploymentBatch = {
-  id: number
+  id: string
   cycle: number
   team: UnitTeam
   queue: WaveQueueItem[]
@@ -24,6 +24,7 @@ export type DeploymentBatch = {
 
 export type ReinforcementConfig = {
   waveIntervalSeconds: number
-  playerSpawnOffsets: MapPosition[]
+  spawnOffsets: Record<UnitTeam, MapPosition[]>
   playerUnitDefinitions: ReinforcementUnitDefinition[]
+  enemyUnitDefinitions: ReinforcementUnitDefinition[]
 }

@@ -7,7 +7,7 @@ import type {
   WaveQueueItem,
 } from '../../shared/types/reinforcements'
 import type { MapPosition } from '../../shared/types/map'
-import type { UnitData } from '../../shared/types/unit'
+import type { UnitData, UnitTeam } from '../../shared/types/unit'
 
 type QueueWaveUnitResult = {
   nextEconomyState: EconomyState
@@ -19,11 +19,10 @@ function createQueueItemId(definitionId: string, queueLength: number) {
   return `${definitionId}-${queueLength}-${crypto.randomUUID()}`
 }
 
-function getSpawnPosition(basePosition: MapPosition, index: number): MapPosition {
-  const offset = reinforcementConfig.playerSpawnOffsets[
-    index % reinforcementConfig.playerSpawnOffsets.length
-  ]
-  const repeatRow = Math.floor(index / reinforcementConfig.playerSpawnOffsets.length)
+function getSpawnPosition(team: UnitTeam, basePosition: MapPosition, index: number): MapPosition {
+  const spawnOffsets = reinforcementConfig.spawnOffsets[team]
+  const offset = spawnOffsets[index % spawnOffsets.length]
+  const repeatRow = Math.floor(index / spawnOffsets.length)
   const rowDepthOffset = repeatRow * 1.2
 
   return [basePosition[0] + offset[0], basePosition[1] + offset[1], basePosition[2] + offset[2] - rowDepthOffset]
@@ -33,13 +32,19 @@ export function getPlayerReinforcementDefinition(definitionId: string) {
   return reinforcementConfig.playerUnitDefinitions.find((definition) => definition.id === definitionId) ?? null
 }
 
-export function queuePlayerWaveUnit(
+export function getEnemyReinforcementDefinition(definitionId: string) {
+  return reinforcementConfig.enemyUnitDefinitions.find((definition) => definition.id === definitionId) ?? null
+}
+
+export function queueWaveUnit(
   economyState: EconomyState,
   waveQueue: WaveQueueItem[],
   definition: ReinforcementUnitDefinition,
   isUnlocked: boolean,
 ): QueueWaveUnitResult {
-  if (!isUnlocked || definition.team !== 'player' || economyState.player.manpower < definition.cost) {
+  const teamState = economyState[definition.team]
+
+  if (!isUnlocked || teamState.manpower < definition.cost) {
     return {
       nextEconomyState: economyState,
       nextWaveQueue: waveQueue,
@@ -50,8 +55,8 @@ export function queuePlayerWaveUnit(
   return {
     nextEconomyState: {
       ...economyState,
-      player: {
-        manpower: economyState.player.manpower - definition.cost,
+      [definition.team]: {
+        manpower: teamState.manpower - definition.cost,
       },
     },
     nextWaveQueue: [
@@ -65,7 +70,25 @@ export function queuePlayerWaveUnit(
   }
 }
 
-export function createPlayerDeploymentBatch(
+export function queuePlayerWaveUnit(
+  economyState: EconomyState,
+  waveQueue: WaveQueueItem[],
+  definition: ReinforcementUnitDefinition,
+  isUnlocked: boolean,
+): QueueWaveUnitResult {
+  if (definition.team !== 'player') {
+    return {
+      nextEconomyState: economyState,
+      nextWaveQueue: waveQueue,
+      queued: false,
+    }
+  }
+
+  return queueWaveUnit(economyState, waveQueue, definition, isUnlocked)
+}
+
+export function createDeploymentBatch(
+  team: UnitTeam,
   queue: WaveQueueItem[],
   cycle: number,
 ): DeploymentBatch | null {
@@ -74,26 +97,32 @@ export function createPlayerDeploymentBatch(
   }
 
   return {
-    id: cycle,
+    id: `${team}-${cycle}`,
     cycle,
-    team: 'player',
+    team,
     queue,
   }
+}
+
+export function createPlayerDeploymentBatch(
+  queue: WaveQueueItem[],
+  cycle: number,
+): DeploymentBatch | null {
+  return createDeploymentBatch('player', queue, cycle)
 }
 
 export function createUnitsFromDeploymentBatch(
   batch: DeploymentBatch,
   existingUnits: UnitData[],
 ): UnitData[] {
-  if (batch.team !== 'player') {
-    return []
-  }
-
-  const playerUnitCount = existingUnits.filter((unit) => unit.team === 'player').length
-  const basePosition = mapConfig.playerBase.position
+  const unitCount = existingUnits.filter((unit) => unit.team === batch.team).length
+  const basePosition = batch.team === 'player' ? mapConfig.playerBase.position : mapConfig.enemyBase.position
 
   return batch.queue.flatMap((queuedUnit, index) => {
-    const definition = getPlayerReinforcementDefinition(queuedUnit.definitionId)
+    const definition =
+      batch.team === 'player'
+        ? getPlayerReinforcementDefinition(queuedUnit.definitionId)
+        : getEnemyReinforcementDefinition(queuedUnit.definitionId)
 
     if (!definition) {
       return []
@@ -101,9 +130,9 @@ export function createUnitsFromDeploymentBatch(
 
     return [
       {
-        id: `${definition.id}-${batch.cycle}-${playerUnitCount + index + 1}`,
+        id: `${definition.id}-${batch.cycle}-${unitCount + index + 1}`,
         team: definition.team,
-        position: getSpawnPosition(basePosition, index),
+        position: getSpawnPosition(batch.team, basePosition, index),
         ...definition.template,
       },
     ]
