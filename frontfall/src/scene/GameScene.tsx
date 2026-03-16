@@ -18,7 +18,11 @@ import {
   simulateControlPointCaptureStep,
 } from './systems/controlPointCapture'
 import { simulateEconomyStep } from './systems/manpowerEconomy'
-import { simulateUnitCombatStep, type UnitTargetMap } from './systems/unitCombat'
+import {
+  simulateUnitCombatStep,
+  type UnitAttackTargetMap,
+  type UnitTargetMap,
+} from './systems/unitCombat'
 import { createUnitsFromDeploymentBatch } from './systems/waveDeployment'
 import { SceneLights } from './world/SceneLights'
 import { Ground } from './world/Ground'
@@ -34,6 +38,10 @@ type ActiveCombatShot = CombatShot & {
 
 function createInitialTargets(units: UnitData[]) {
   return Object.fromEntries(units.map((unit) => [unit.id, null])) as UnitTargetMap
+}
+
+function createInitialAttackTargets(units: UnitData[]) {
+  return Object.fromEntries(units.map((unit) => [unit.id, null])) as UnitAttackTargetMap
 }
 
 type GameSceneProps = {
@@ -56,10 +64,14 @@ export function GameScene({
   const [controlPoints, setControlPoints] = useState<ControlPointState[]>(initialControlPoints)
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
   const [unitTargets, setUnitTargets] = useState<UnitTargetMap>(() => createInitialTargets(initialUnits))
+  const [attackTargets, setAttackTargets] = useState<UnitAttackTargetMap>(() =>
+    createInitialAttackTargets(initialUnits),
+  )
   const [shots, setShots] = useState<ActiveCombatShot[]>([])
   const unitsRef = useRef(units)
   const controlPointsRef = useRef(controlPoints)
   const unitTargetsRef = useRef(unitTargets)
+  const attackTargetsRef = useRef(attackTargets)
   const shotsRef = useRef(shots)
   const economyStateRef = useRef(economyState)
   const lastDeploymentBatchIdRef = useRef<number | null>(null)
@@ -81,6 +93,10 @@ export function GameScene({
   useEffect(() => {
     unitTargetsRef.current = unitTargets
   }, [unitTargets])
+
+  useEffect(() => {
+    attackTargetsRef.current = attackTargets
+  }, [attackTargets])
 
   useEffect(() => {
     shotsRef.current = shots
@@ -118,6 +134,17 @@ export function GameScene({
         return nextTargets
       })
 
+      setAttackTargets((currentTargets) => {
+        const nextTargets = { ...currentTargets }
+
+        for (const unit of spawnedUnits) {
+          nextTargets[unit.id] = null
+        }
+
+        attackTargetsRef.current = nextTargets
+        return nextTargets
+      })
+
       return nextUnits
     })
   }, [deploymentBatch])
@@ -149,7 +176,12 @@ export function GameScene({
   }, [])
 
   useFrame((_, delta) => {
-    const result = simulateUnitCombatStep(unitsRef.current, unitTargetsRef.current, delta)
+    const result = simulateUnitCombatStep(
+      unitsRef.current,
+      unitTargetsRef.current,
+      attackTargetsRef.current,
+      delta,
+    )
     const captureResult = simulateControlPointCaptureStep(
       controlPointsRef.current,
       result.units,
@@ -233,6 +265,32 @@ export function GameScene({
         }
 
         unitTargetsRef.current = nextTargets
+        return nextTargets
+      })
+
+      setAttackTargets((currentTargets) => {
+        let hasChanges = false
+        const nextTargets = { ...currentTargets }
+
+        for (const unitId of removedIds) {
+          if (unitId in nextTargets) {
+            delete nextTargets[unitId]
+            hasChanges = true
+          }
+        }
+
+        for (const [unitId, targetUnitId] of Object.entries(nextTargets)) {
+          if (targetUnitId && removedIds.has(targetUnitId)) {
+            nextTargets[unitId] = null
+            hasChanges = true
+          }
+        }
+
+        if (!hasChanges) {
+          return currentTargets
+        }
+
+        attackTargetsRef.current = nextTargets
         return nextTargets
       })
 
@@ -410,6 +468,21 @@ export function GameScene({
       unitTargetsRef.current = nextTargets
       return nextTargets
     })
+
+    setAttackTargets((currentTargets) => {
+      const nextTargets = { ...currentTargets }
+
+      for (const unitId of selectedUnitIds) {
+        if (!(unitId in nextTargets)) {
+          continue
+        }
+
+        nextTargets[unitId] = null
+      }
+
+      attackTargetsRef.current = nextTargets
+      return nextTargets
+    })
   }
 
   function handleUnitSelect(unitId: string, shouldToggleSelection: boolean) {
@@ -423,6 +496,27 @@ export function GameScene({
       }
 
       return [...currentSelectedUnitIds, unitId]
+    })
+  }
+
+  function handleEnemyTarget(targetUnitId: string) {
+    if (selectedUnitIds.length === 0) {
+      return
+    }
+
+    setAttackTargets((currentTargets) => {
+      const nextTargets = { ...currentTargets }
+
+      for (const unitId of selectedUnitIds) {
+        if (!(unitId in nextTargets)) {
+          continue
+        }
+
+        nextTargets[unitId] = targetUnitId
+      }
+
+      attackTargetsRef.current = nextTargets
+      return nextTargets
     })
   }
 
@@ -440,6 +534,7 @@ export function GameScene({
           key={unit.id}
           unit={unit}
           isSelected={unit.team === 'player' && selectedUnitIds.includes(unit.id)}
+          onEnemyTarget={handleEnemyTarget}
           onSelect={handleUnitSelect}
         />
       ))}

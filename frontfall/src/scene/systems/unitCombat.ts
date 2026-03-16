@@ -3,6 +3,7 @@ import type { UnitData } from '../../shared/types/unit'
 import { moveUnitTowardsTarget } from './unitMovement'
 
 export type UnitTargetMap = Record<string, MapPosition | null>
+export type UnitAttackTargetMap = Record<string, string | null>
 
 export type CombatSimulationResult = {
   units: UnitData[]
@@ -53,9 +54,32 @@ function findNearestEnemyInRange(unit: UnitData, units: UnitData[]) {
   return nearestEnemy
 }
 
+function findTargetedEnemy(unit: UnitData, units: UnitData[], targetUnitId: string | null) {
+  if (!targetUnitId) {
+    return null
+  }
+
+  const target = units.find((candidate) => candidate.id === targetUnitId) ?? null
+
+  if (!target || target.team === unit.team) {
+    return null
+  }
+
+  return target
+}
+
+function isUnitInAttackRange(unit: UnitData, target: UnitData) {
+  const dx = target.position[0] - unit.position[0]
+  const dz = target.position[2] - unit.position[2]
+  const distanceSquared = dx * dx + dz * dz
+
+  return distanceSquared <= unit.attackRange * unit.attackRange
+}
+
 export function simulateUnitCombatStep(
   units: UnitData[],
   unitTargets: UnitTargetMap,
+  attackTargets: UnitAttackTargetMap,
   deltaSeconds: number,
 ): CombatSimulationResult {
   const nextUnits = units.map(cloneUnit)
@@ -66,8 +90,20 @@ export function simulateUnitCombatStep(
 
   for (const unit of nextUnits) {
     const targetPosition = unitTargets[unit.id]
+    const attackTarget = findTargetedEnemy(unit, nextUnits, attackTargets[unit.id] ?? null)
 
-    if (targetPosition && unit.moveSpeed > 0) {
+    if (attackTarget && unit.moveSpeed > 0 && !isUnitInAttackRange(unit, attackTarget)) {
+      const movement = moveUnitTowardsTarget(
+        unit.position,
+        attackTarget.position,
+        deltaSeconds,
+        unit.moveSpeed,
+        Math.max(unit.stopDistance, unit.attackRange * 0.9),
+      )
+
+      unit.position = movement.position
+      changed = true
+    } else if (targetPosition && unit.moveSpeed > 0) {
       const movement = moveUnitTowardsTarget(
         unit.position,
         targetPosition,
@@ -96,7 +132,11 @@ export function simulateUnitCombatStep(
   }
 
   for (const unit of nextUnits) {
-    const target = findNearestEnemyInRange(unit, nextUnits)
+    const prioritizedTarget = findTargetedEnemy(unit, nextUnits, attackTargets[unit.id] ?? null)
+    const target =
+      prioritizedTarget && isUnitInAttackRange(unit, prioritizedTarget)
+        ? prioritizedTarget
+        : findNearestEnemyInRange(unit, nextUnits)
 
     if (!target || unit.attackCooldownRemaining > 0) {
       continue
