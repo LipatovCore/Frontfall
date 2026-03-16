@@ -1,9 +1,10 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { mapConfig } from '../shared/config/mapConfig'
 import type { EconomyState } from '../shared/types/economy'
 import { initialEnemyUnits } from '../shared/config/enemyUnits'
 import { initialPlayerUnits } from '../shared/config/playerUnits'
+import type { DeploymentBatch } from '../shared/types/reinforcements'
 import type { ControlPointState, MapPosition } from '../shared/types/map'
 import type { UnitData } from '../shared/types/unit'
 import { TopDownCamera } from './camera/TopDownCamera'
@@ -16,6 +17,7 @@ import {
 } from './systems/controlPointCapture'
 import { simulateEconomyStep } from './systems/manpowerEconomy'
 import { simulateUnitCombatStep, type UnitTargetMap } from './systems/unitCombat'
+import { createUnitsFromDeploymentBatch } from './systems/waveDeployment'
 import { SceneLights } from './world/SceneLights'
 import { Ground } from './world/Ground'
 import { MapLayout } from './world/MapLayout'
@@ -33,12 +35,14 @@ function createInitialTargets(units: UnitData[]) {
 }
 
 type GameSceneProps = {
+  deploymentBatch: DeploymentBatch | null
   economyState: EconomyState
-  onEconomyStateChange: (nextEconomyState: EconomyState) => void
+  onEconomyStateChange: Dispatch<SetStateAction<EconomyState>>
   onControlPointsChange: (nextControlPoints: ControlPointState[]) => void
 }
 
 export function GameScene({
+  deploymentBatch,
   economyState,
   onEconomyStateChange,
   onControlPointsChange,
@@ -53,6 +57,7 @@ export function GameScene({
   const unitTargetsRef = useRef(unitTargets)
   const shotsRef = useRef(shots)
   const economyStateRef = useRef(economyState)
+  const lastDeploymentBatchIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     unitsRef.current = units
@@ -73,6 +78,38 @@ export function GameScene({
   useEffect(() => {
     economyStateRef.current = economyState
   }, [economyState])
+
+  useEffect(() => {
+    if (!deploymentBatch || deploymentBatch.id === lastDeploymentBatchIdRef.current) {
+      return
+    }
+
+    lastDeploymentBatchIdRef.current = deploymentBatch.id
+
+    setUnits((currentUnits) => {
+      const spawnedUnits = createUnitsFromDeploymentBatch(deploymentBatch, currentUnits)
+
+      if (spawnedUnits.length === 0) {
+        return currentUnits
+      }
+
+      const nextUnits = [...currentUnits, ...spawnedUnits]
+      unitsRef.current = nextUnits
+
+      setUnitTargets((currentTargets) => {
+        const nextTargets = { ...currentTargets }
+
+        for (const unit of spawnedUnits) {
+          nextTargets[unit.id] = null
+        }
+
+        unitTargetsRef.current = nextTargets
+        return nextTargets
+      })
+
+      return nextUnits
+    })
+  }, [deploymentBatch])
 
   useEffect(() => {
     onControlPointsChange(controlPoints)
@@ -104,7 +141,6 @@ export function GameScene({
     const nextControlPoints = captureResult.changed
       ? captureResult.controlPoints
       : controlPointsRef.current
-    const economyResult = simulateEconomyStep(economyStateRef.current, nextControlPoints, delta)
     const nextShots = shotsRef.current
       .map((shot) => ({
         ...shot,
@@ -140,10 +176,11 @@ export function GameScene({
       setControlPoints(nextControlPoints)
     }
 
-    if (economyResult.changed) {
+    onEconomyStateChange((currentEconomyState) => {
+      const economyResult = simulateEconomyStep(currentEconomyState, nextControlPoints, delta)
       economyStateRef.current = economyResult.economyState
-      onEconomyStateChange(economyResult.economyState)
-    }
+      return economyResult.economyState
+    })
 
     if (!result.changed) {
       return
