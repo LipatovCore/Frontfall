@@ -36,10 +36,77 @@ canvas {
 }
 
 .scene-shell {
+  position: relative;
   width: 100%;
   height: calc(100vh - 24px);
   overflow: hidden;
   border: 1px solid rgba(130, 154, 190, 0.16);
   border-radius: 12px;
   background: rgba(5, 9, 14, 0.92);
+}
+
+.manpower-hud {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.manpower-card {
+  min-width: 180px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 171, 205, 0.2);
+  border-radius: 10px;
+  background: rgba(6, 11, 18, 0.84);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  color: #dce7f5;
+}
+
+.manpower-card-player {
+  border-color: rgba(92, 143, 255, 0.34);
+}
+
+.manpower-card-enemy {
+  border-color: rgba(255, 127, 109, 0.34);
+}
+
+.manpower-label,
+.manpower-income {
+  display: block;
+}
+
+.manpower-label {
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #91a3bb;
+}
+
+.manpower-value {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.manpower-income {
+  font-size: 13px;
+  color: #9cb1ca;
+}
+
+@media (max-width: 720px) {
+  .manpower-hud {
+    right: 16px;
+    left: 16px;
+    flex-direction: column;
+  }
+
+  .manpower-card {
+    min-width: 0;
+  }
 }

@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { mapConfig } from '../shared/config/mapConfig'
+import type { EconomyState } from '../shared/types/economy'
 import { initialEnemyUnits } from '../shared/config/enemyUnits'
 import { initialPlayerUnits } from '../shared/config/playerUnits'
 import type { ControlPointState, MapPosition } from '../shared/types/map'
@@ -13,6 +14,7 @@ import {
   createInitialControlPointStates,
   simulateControlPointCaptureStep,
 } from './systems/controlPointCapture'
+import { simulateEconomyStep } from './systems/manpowerEconomy'
 import { simulateUnitCombatStep, type UnitTargetMap } from './systems/unitCombat'
 import { SceneLights } from './world/SceneLights'
 import { Ground } from './world/Ground'
@@ -30,7 +32,17 @@ function createInitialTargets(units: UnitData[]) {
   return Object.fromEntries(units.map((unit) => [unit.id, null])) as UnitTargetMap
 }
 
-export function GameScene() {
+type GameSceneProps = {
+  economyState: EconomyState
+  onEconomyStateChange: (nextEconomyState: EconomyState) => void
+  onControlPointsChange: (nextControlPoints: ControlPointState[]) => void
+}
+
+export function GameScene({
+  economyState,
+  onEconomyStateChange,
+  onControlPointsChange,
+}: GameSceneProps) {
   const [units, setUnits] = useState<UnitData[]>(initialUnits)
   const [controlPoints, setControlPoints] = useState<ControlPointState[]>(initialControlPoints)
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
@@ -40,6 +52,7 @@ export function GameScene() {
   const controlPointsRef = useRef(controlPoints)
   const unitTargetsRef = useRef(unitTargets)
   const shotsRef = useRef(shots)
+  const economyStateRef = useRef(economyState)
 
   useEffect(() => {
     unitsRef.current = units
@@ -56,6 +69,14 @@ export function GameScene() {
   useEffect(() => {
     shotsRef.current = shots
   }, [shots])
+
+  useEffect(() => {
+    economyStateRef.current = economyState
+  }, [economyState])
+
+  useEffect(() => {
+    onControlPointsChange(controlPoints)
+  }, [controlPoints, onControlPointsChange])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -80,6 +101,10 @@ export function GameScene() {
       result.units,
       delta,
     )
+    const nextControlPoints = captureResult.changed
+      ? captureResult.controlPoints
+      : controlPointsRef.current
+    const economyResult = simulateEconomyStep(economyStateRef.current, nextControlPoints, delta)
     const nextShots = shotsRef.current
       .map((shot) => ({
         ...shot,
@@ -111,8 +136,13 @@ export function GameScene() {
     }
 
     if (captureResult.changed) {
-      controlPointsRef.current = captureResult.controlPoints
-      setControlPoints(captureResult.controlPoints)
+      controlPointsRef.current = nextControlPoints
+      setControlPoints(nextControlPoints)
+    }
+
+    if (economyResult.changed) {
+      economyStateRef.current = economyResult.economyState
+      onEconomyStateChange(economyResult.economyState)
     }
 
     if (!result.changed) {

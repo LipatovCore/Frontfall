@@ -16,9 +16,9 @@ const progressBarWidth = 1.28
 
 export function ControlPoint({ point }: ControlPointProps) {
   const isResource = point.type === 'resource'
-  const padColor = isResource ? '#1f3a36' : '#3a3020'
-  const accentColor = isResource ? '#58d6b2' : '#ffd166'
-  const detailColor = isResource ? '#b1fff0' : '#fff2b6'
+  const padColor = isResource ? '#123840' : '#3a3020'
+  const accentColor = isResource ? '#3bd3ff' : '#ffd166'
+  const detailColor = isResource ? '#d4f7ff' : '#fff2b6'
   const ownerColor = ownerColors[point.owner]
   const captureProgressRatio = point.captureProgress / controlPointRules.captureProgressMax
   const fillScale = Math.abs(captureProgressRatio)
@@ -153,7 +153,55 @@ export function ControlPoint({ point }: ControlPointProps) {
             </mesh>
           </group>
         ) : null}
+
+        {isResource ? (
+          <group position={[0, 0.03, -0.3]}>
+            <mesh position={[-0.22, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.14, 0.14]} />
+              <meshBasicMaterial color={accentColor} transparent opacity={0.95} />
+            </mesh>
+            <mesh position={[0.22, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.14, 0.14]} />
+              <meshBasicMaterial color={accentColor} transparent opacity={0.95} />
+            </mesh>
+            <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.18, 0.18]} />
+              <meshBasicMaterial color={detailColor} transparent opacity={0.98} />
+            </mesh>
+          </group>
+        ) : null}
       </group>
+
+      {isResource ? (
+        <group position={[0, 1.22, 0]}>
+          <mesh rotation={[0, Math.PI / 4, 0]} castShadow>
+            <boxGeometry args={[0.22, 0.22, 0.22]} />
+            <meshStandardMaterial
+              color={detailColor}
+              emissive={accentColor}
+              emissiveIntensity={1.15}
+            />
+          </mesh>
+
+          <mesh position={[0.42, 0, 0]} castShadow>
+            <boxGeometry args={[0.16, 0.3, 0.16]} />
+            <meshStandardMaterial
+              color={accentColor}
+              emissive={accentColor}
+              emissiveIntensity={0.7}
+            />
+          </mesh>
+
+          <mesh position={[-0.42, 0, 0]} castShadow>
+            <boxGeometry args={[0.16, 0.3, 0.16]} />
+            <meshStandardMaterial
+              color={accentColor}
+              emissive={accentColor}
+              emissiveIntensity={0.7}
+            />
+          </mesh>
+        </group>
+      ) : null}
 
       {renderVariant()}
     </group>

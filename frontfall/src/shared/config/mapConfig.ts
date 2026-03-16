@@ -1,4 +1,5 @@
 import type { TacticalMapConfig } from '../types/map'
+import { economyConfig } from './economyConfig'
 
 const controlPointSlots = [
   [-5.8, 0, -4.8],
@@ -72,6 +73,7 @@ export const mapConfig = {
       variant: 'crystal',
       position: randomPointPositions[2],
       captureRadius: defaultCaptureRadius,
+      incomePerTick: economyConfig.resourcePointIncomePerTick,
     },
     {
       id: 'resource-relay',
@@ -79,6 +81,7 @@ export const mapConfig = {
       variant: 'relay',
       position: randomPointPositions[3],
       captureRadius: defaultCaptureRadius,
+      incomePerTick: economyConfig.resourcePointIncomePerTick,
     },
   ],
   props: [

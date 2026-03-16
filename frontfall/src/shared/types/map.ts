@@ -10,13 +10,23 @@ export type BaseEntityData = {
   position: MapPosition
 }
 
-export type ControlPointData = {
+type BaseControlPointData = {
   id: string
   position: MapPosition
-  type: PointType
   variant: ControlPointVariant
   captureRadius: number
 }
+
+export type ResourceControlPointData = BaseControlPointData & {
+  type: 'resource'
+  incomePerTick: number
+}
+
+export type UnlockControlPointData = BaseControlPointData & {
+  type: 'unlock'
+}
+
+export type ControlPointData = ResourceControlPointData | UnlockControlPointData
 
 export type ControlPointState = ControlPointData & {
   owner: ControlPointOwner
