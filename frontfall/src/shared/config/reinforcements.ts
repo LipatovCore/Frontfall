@@ -1,7 +1,7 @@
 import type { ReinforcementConfig } from '../types/reinforcements'
 
 export const reinforcementConfig = {
-  waveIntervalSeconds: 15,
+  waveIntervalSeconds: 30,
   playerSpawnOffsets: [
     [-1.8, 0, -1.4],
     [0, 0, -1.4],

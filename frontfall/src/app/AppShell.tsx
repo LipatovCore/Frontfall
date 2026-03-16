@@ -9,10 +9,29 @@ import {
 } from '../scene/systems/waveDeployment'
 import { mapConfig } from '../shared/config/mapConfig'
 import { reinforcementConfig } from '../shared/config/reinforcements'
+import type { SelectionBox } from '../shared/types/selection'
 import type { DeploymentBatch, WaveQueueItem } from '../shared/types/reinforcements'
 import { GameScene } from '../scene/GameScene'
 import { ManpowerHud } from './ManpowerHud'
 import { ReinforcementPanel } from './ReinforcementPanel'
+
+function getSelectionBoxStyle(selectionBox: SelectionBox | null) {
+  if (!selectionBox) {
+    return null
+  }
+
+  const left = Math.min(selectionBox.start.x, selectionBox.end.x)
+  const top = Math.min(selectionBox.start.y, selectionBox.end.y)
+  const width = Math.abs(selectionBox.end.x - selectionBox.start.x)
+  const height = Math.abs(selectionBox.end.y - selectionBox.start.y)
+
+  return {
+    left,
+    top,
+    width,
+    height,
+  }
+}
 
 export function AppShell() {
   const [economyState, setEconomyState] = useState(() => createInitialEconomyState())
@@ -23,8 +42,11 @@ export function AppShell() {
   const [waveTimerSeconds, setWaveTimerSeconds] = useState(reinforcementConfig.waveIntervalSeconds)
   const [deploymentCycle, setDeploymentCycle] = useState(1)
   const [deploymentBatch, setDeploymentBatch] = useState<DeploymentBatch | null>(null)
+  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null)
   const economyStateRef = useRef(economyState)
   const waveQueueRef = useRef(waveQueue)
+
+  const selectionBoxStyle = getSelectionBoxStyle(selectionBox)
 
   useEffect(() => {
     economyStateRef.current = economyState
@@ -93,7 +115,10 @@ export function AppShell() {
 
   return (
     <main className="app-shell">
-      <section className="scene-shell" aria-label="Frontfall tactical prototype">
+      <section
+        className="scene-shell"
+        aria-label="Frontfall tactical prototype"
+      >
         <ManpowerHud economyState={economyState} controlPoints={controlPoints} />
         <ReinforcementPanel
           deploymentCycle={deploymentCycle}
@@ -102,12 +127,25 @@ export function AppShell() {
           waveTimerSeconds={waveTimerSeconds}
           onQueueUnit={handleQueueUnit}
         />
+        {selectionBoxStyle ? (
+          <div
+            className="selection-box"
+            style={{
+              left: selectionBoxStyle.left,
+              top: selectionBoxStyle.top,
+              width: selectionBoxStyle.width,
+              height: selectionBoxStyle.height,
+            }}
+            aria-hidden="true"
+          />
+        ) : null}
         <Canvas shadows dpr={[1, 1.5]}>
           <GameScene
             deploymentBatch={deploymentBatch}
             economyState={economyState}
             onEconomyStateChange={setEconomyState}
             onControlPointsChange={setControlPoints}
+            onSelectionBoxChange={setSelectionBox}
           />
         </Canvas>
       </section>
