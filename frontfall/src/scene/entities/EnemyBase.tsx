@@ -1,12 +1,41 @@
-import type { BaseEntityData } from '../../shared/types/map'
+import type { ThreeEvent } from '@react-three/fiber'
+import type { BaseCoreState } from '../../shared/types/map'
 
 type EnemyBaseProps = {
-  base: BaseEntityData
+  base: BaseCoreState
+  onTarget: (baseId: string) => void
 }
 
-export function EnemyBase({ base }: EnemyBaseProps) {
+export function EnemyBase({ base, onTarget }: EnemyBaseProps) {
+  const healthRatio = base.currentHealth / base.maxHealth
+
+  function handlePointerDown(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation()
+
+    if (event.button !== 0) {
+      return
+    }
+
+    onTarget(base.id)
+  }
+
   return (
-    <group name={base.id} position={base.position}>
+    <group name={base.id} position={base.position} onPointerDown={handlePointerDown}>
+      <group position={[0, 2.05, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <planeGeometry args={[3.2, 0.2]} />
+          <meshBasicMaterial color="#12161d" transparent opacity={0.9} />
+        </mesh>
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[-1.6 + healthRatio * 1.6, 0.02, 0]}
+          scale={[healthRatio, 1, 1]}
+        >
+          <planeGeometry args={[3.2, 0.12]} />
+          <meshBasicMaterial color="#ff9d8f" />
+        </mesh>
+      </group>
+
       <mesh position={[0, 0.18, 0]} receiveShadow>
         <cylinderGeometry args={[2.2, 2.5, 0.36, 32]} />
         <meshStandardMaterial color="#33252a" />

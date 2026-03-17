@@ -117,6 +117,83 @@ canvas {
   gap: 12px;
 }
 
+.base-health-hud {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+}
+
+.base-health-card {
+  min-width: 170px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 171, 205, 0.2);
+  border-radius: 10px;
+  background: rgba(6, 11, 18, 0.84);
+  color: #dce7f5;
+}
+
+.base-health-card span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #91a3bb;
+}
+
+.base-health-card strong {
+  font-size: 16px;
+}
+
+.base-health-card-player {
+  border-color: rgba(92, 143, 255, 0.34);
+}
+
+.base-health-card-enemy {
+  border-color: rgba(255, 127, 109, 0.34);
+}
+
+.game-over-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 7, 12, 0.68);
+}
+
+.game-over-card {
+  min-width: 220px;
+  padding: 20px 22px;
+  border: 1px solid rgba(148, 171, 205, 0.3);
+  border-radius: 12px;
+  background: rgba(6, 11, 18, 0.92);
+  text-align: center;
+  color: #dce7f5;
+}
+
+.game-over-card h2 {
+  margin: 0 0 14px;
+  font-size: 28px;
+}
+
+.game-over-card button {
+  padding: 9px 16px;
+  border: 1px solid rgba(127, 214, 255, 0.6);
+  border-radius: 8px;
+  background: rgba(24, 38, 58, 0.96);
+  color: #dce7f5;
+  font: inherit;
+  cursor: pointer;
+}
+
+.game-over-card button:hover {
+  background: rgba(33, 52, 78, 0.98);
+}
+
 .reinforcement-card {
   padding: 12px 14px;
   border: 1px solid rgba(148, 171, 205, 0.2);
@@ -305,6 +382,12 @@ canvas {
     bottom: 16px;
     left: 16px;
     width: auto;
+  }
+
+  .base-health-hud {
+    top: auto;
+    left: 16px;
+    bottom: 224px;
   }
 
   .reinforcement-stats {

@@ -46,11 +46,15 @@ export const mapConfig = {
   },
   playerBase: {
     id: 'player-main-base',
+    team: 'player',
     position: [0, 0, 9],
+    maxHealth: 800,
   },
   enemyBase: {
     id: 'enemy-main-base',
+    team: 'enemy',
     position: [0, 0, -9],
+    maxHealth: 800,
   },
   controlPoints: [
     {

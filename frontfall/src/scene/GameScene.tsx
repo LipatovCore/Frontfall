@@ -3,10 +3,11 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import { mapConfig } from '../shared/config/mapConfig'
 import type { EconomyState } from '../shared/types/economy'
+import type { GamePhase } from '../shared/types/game'
 import { initialEnemyUnits } from '../shared/config/enemyUnits'
 import { initialPlayerUnits } from '../shared/config/playerUnits'
 import type { DeploymentBatch } from '../shared/types/reinforcements'
-import type { ControlPointState, MapPosition } from '../shared/types/map'
+import type { BaseCoreState, ControlPointState, MapPosition } from '../shared/types/map'
 import type { SelectionBox, ScreenPoint } from '../shared/types/selection'
 import type { UnitData } from '../shared/types/unit'
 import { TopDownCamera } from './camera/TopDownCamera'
@@ -45,19 +46,35 @@ function createInitialAttackTargets(units: UnitData[]) {
   return Object.fromEntries(units.map((unit) => [unit.id, null])) as UnitAttackTargetMap
 }
 
+function didBaseHealthChange(previousBases: BaseCoreState[], nextBases: BaseCoreState[]) {
+  if (previousBases.length !== nextBases.length) {
+    return true
+  }
+
+  return nextBases.some((base, index) => base.currentHealth !== previousBases[index]?.currentHealth)
+}
+
 type GameSceneProps = {
+  baseCores: BaseCoreState[]
   deploymentBatches: DeploymentBatch[]
   economyState: EconomyState
+  gamePhase: GamePhase
+  onBaseCoresChange: (nextBaseCores: BaseCoreState[]) => void
   onEconomyStateChange: Dispatch<SetStateAction<EconomyState>>
   onControlPointsChange: (nextControlPoints: ControlPointState[]) => void
+  onGamePhaseChange: (nextPhase: GamePhase) => void
   onSelectionBoxChange: (selectionBox: SelectionBox | null) => void
 }
 
 export function GameScene({
+  baseCores,
   deploymentBatches,
   economyState,
+  gamePhase,
+  onBaseCoresChange,
   onEconomyStateChange,
   onControlPointsChange,
+  onGamePhaseChange,
   onSelectionBoxChange,
 }: GameSceneProps) {
   const { camera, gl } = useThree()
@@ -75,6 +92,8 @@ export function GameScene({
   const attackTargetsRef = useRef(attackTargets)
   const shotsRef = useRef(shots)
   const economyStateRef = useRef(economyState)
+  const baseCoresRef = useRef(baseCores)
+  const gamePhaseRef = useRef(gamePhase)
   const processedDeploymentBatchIdsRef = useRef<Set<string>>(new Set())
   const enemyDecisionElapsedRef = useRef(0)
   const dragSelectionRef = useRef<{
@@ -109,6 +128,25 @@ export function GameScene({
   }, [economyState])
 
   useEffect(() => {
+    baseCoresRef.current = baseCores
+  }, [baseCores])
+
+  useEffect(() => {
+    gamePhaseRef.current = gamePhase
+  }, [gamePhase])
+
+  useEffect(() => {
+    if (gamePhase !== 'playing') {
+      setSelectedUnitIds([])
+      onSelectionBoxChange(null)
+    }
+  }, [gamePhase, onSelectionBoxChange])
+
+  useEffect(() => {
+    if (gamePhase !== 'playing') {
+      return
+    }
+
     const nextDeploymentBatches = deploymentBatches.filter(
       (batch) => !processedDeploymentBatchIdsRef.current.has(batch.id),
     )
@@ -157,11 +195,15 @@ export function GameScene({
 
       return nextUnits
     })
-  }, [deploymentBatches])
+  }, [deploymentBatches, gamePhase])
 
   useEffect(() => {
     onControlPointsChange(controlPoints)
   }, [controlPoints, onControlPointsChange])
+
+  useEffect(() => {
+    onBaseCoresChange(baseCores)
+  }, [baseCores, onBaseCoresChange])
 
   useEffect(() => {
     return () => {
@@ -186,6 +228,10 @@ export function GameScene({
   }, [])
 
   useFrame((_, delta) => {
+    if (gamePhaseRef.current !== 'playing') {
+      return
+    }
+
     enemyDecisionElapsedRef.current += delta
 
     if (enemyDecisionElapsedRef.current >= enemyAiConfig.decisionIntervalSeconds) {
@@ -204,15 +250,12 @@ export function GameScene({
 
     const result = simulateUnitCombatStep(
       unitsRef.current,
+      baseCoresRef.current,
       unitTargetsRef.current,
       attackTargetsRef.current,
       delta,
     )
-    const captureResult = simulateControlPointCaptureStep(
-      controlPointsRef.current,
-      result.units,
-      delta,
-    )
+    const captureResult = simulateControlPointCaptureStep(controlPointsRef.current, result.units, delta)
     const nextControlPoints = captureResult.changed
       ? captureResult.controlPoints
       : controlPointsRef.current
@@ -251,6 +294,19 @@ export function GameScene({
       setControlPoints(nextControlPoints)
     }
 
+    if (didBaseHealthChange(baseCoresRef.current, result.bases)) {
+      baseCoresRef.current = result.bases
+      onBaseCoresChange(result.bases)
+    }
+
+    const destroyedEnemyBase = result.bases.some((base) => base.team === 'enemy' && base.currentHealth <= 0)
+    const destroyedPlayerBase = result.bases.some((base) => base.team === 'player' && base.currentHealth <= 0)
+
+    if (destroyedEnemyBase || destroyedPlayerBase) {
+      onGamePhaseChange(destroyedEnemyBase ? 'victory' : 'defeat')
+      return
+    }
+
     onEconomyStateChange((currentEconomyState) => {
       const economyResult = simulateEconomyStep(currentEconomyState, nextControlPoints, delta)
       economyStateRef.current = economyResult.economyState
@@ -264,9 +320,14 @@ export function GameScene({
     unitsRef.current = result.units
     setUnits(result.units)
 
-    if (result.reachedTargetUnitIds.length > 0 || result.removedUnitIds.length > 0) {
+    if (
+      result.reachedTargetUnitIds.length > 0 ||
+      result.removedUnitIds.length > 0 ||
+      result.destroyedBaseIds.length > 0
+    ) {
       const completedIds = new Set(result.reachedTargetUnitIds)
       const removedIds = new Set(result.removedUnitIds)
+      const destroyedBaseIds = new Set(result.destroyedBaseIds)
 
       setUnitTargets((currentTargets) => {
         let hasChanges = false
@@ -305,8 +366,8 @@ export function GameScene({
           }
         }
 
-        for (const [unitId, targetUnitId] of Object.entries(nextTargets)) {
-          if (targetUnitId && removedIds.has(targetUnitId)) {
+        for (const [unitId, targetId] of Object.entries(nextTargets)) {
+          if (targetId && (removedIds.has(targetId) || destroyedBaseIds.has(targetId))) {
             nextTargets[unitId] = null
             hasChanges = true
           }
@@ -329,6 +390,10 @@ export function GameScene({
   })
 
   function handleGroundPointerDown(position: MapPosition, pointer: ScreenPoint) {
+    if (gamePhaseRef.current !== 'playing') {
+      return
+    }
+
     dragSelectionRef.current = {
       startWorld: position,
       startScreen: pointer,
@@ -392,6 +457,10 @@ export function GameScene({
     }
 
     function handlePointerMove(event: PointerEvent) {
+      if (gamePhaseRef.current !== 'playing') {
+        return
+      }
+
       const activeDrag = dragSelectionRef.current
 
       if (!activeDrag) {
@@ -419,6 +488,12 @@ export function GameScene({
     }
 
     function handlePointerUp(event: PointerEvent) {
+      if (gamePhaseRef.current !== 'playing') {
+        dragSelectionRef.current = null
+        onSelectionBoxChange(null)
+        return
+      }
+
       const activeDrag = dragSelectionRef.current
 
       if (!activeDrag || event.button !== 0) {
@@ -474,7 +549,7 @@ export function GameScene({
   }, [camera, gl, onSelectionBoxChange, selectedUnitIds])
 
   function handleGroundClick(position: MapPosition) {
-    if (selectedUnitIds.length === 0) {
+    if (gamePhaseRef.current !== 'playing' || selectedUnitIds.length === 0) {
       return
     }
 
@@ -512,6 +587,10 @@ export function GameScene({
   }
 
   function handleUnitSelect(unitId: string, shouldToggleSelection: boolean) {
+    if (gamePhaseRef.current !== 'playing') {
+      return
+    }
+
     setSelectedUnitIds((currentSelectedUnitIds) => {
       if (!shouldToggleSelection) {
         return [unitId]
@@ -525,8 +604,8 @@ export function GameScene({
     })
   }
 
-  function handleEnemyTarget(targetUnitId: string) {
-    if (selectedUnitIds.length === 0) {
+  function handleEnemyTarget(targetId: string) {
+    if (gamePhaseRef.current !== 'playing' || selectedUnitIds.length === 0) {
       return
     }
 
@@ -538,7 +617,7 @@ export function GameScene({
           continue
         }
 
-        nextTargets[unitId] = targetUnitId
+        nextTargets[unitId] = targetId
       }
 
       attackTargetsRef.current = nextTargets
@@ -553,7 +632,11 @@ export function GameScene({
       <TopDownCamera />
       <SceneLights />
       <Ground onGroundPointerDown={handleGroundPointerDown} />
-      <MapLayout controlPoints={controlPoints} />
+      <MapLayout
+        baseCores={baseCores}
+        controlPoints={controlPoints}
+        onEnemyBaseTarget={handleEnemyTarget}
+      />
       <CombatShots shots={shots} />
       {units.map((unit) => (
         <CombatUnit

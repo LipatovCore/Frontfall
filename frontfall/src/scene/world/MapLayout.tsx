@@ -1,5 +1,5 @@
 import { mapConfig } from '../../shared/config/mapConfig'
-import type { ControlPointState, MapPosition } from '../../shared/types/map'
+import type { BaseCoreState, ControlPointState, MapPosition } from '../../shared/types/map'
 import { ControlPoint } from '../entities/ControlPoint'
 import { EnemyBase } from '../entities/EnemyBase'
 import { PlayerBase } from '../entities/PlayerBase'
@@ -71,17 +71,28 @@ function BoundaryBeacons() {
 }
 
 type MapLayoutProps = {
+  baseCores: BaseCoreState[]
   controlPoints: ControlPointState[]
+  onEnemyBaseTarget: (baseId: string) => void
 }
 
-export function MapLayout({ controlPoints }: MapLayoutProps) {
+export function MapLayout({ baseCores, controlPoints, onEnemyBaseTarget }: MapLayoutProps) {
+  const playerBase = baseCores.find((base) => base.team === 'player') ?? {
+    ...mapConfig.playerBase,
+    currentHealth: mapConfig.playerBase.maxHealth,
+  }
+  const enemyBase = baseCores.find((base) => base.team === 'enemy') ?? {
+    ...mapConfig.enemyBase,
+    currentHealth: mapConfig.enemyBase.maxHealth,
+  }
+
   return (
     <group name="map-layout">
       <MapMarkings />
       <GreyboxProps />
       <BoundaryBeacons />
-      <PlayerBase base={mapConfig.playerBase} />
-      <EnemyBase base={mapConfig.enemyBase} />
+      <PlayerBase base={playerBase} />
+      <EnemyBase base={enemyBase} onTarget={onEnemyBaseTarget} />
       {controlPoints.map((point) => (
         <ControlPoint key={point.id} point={point} />
       ))}

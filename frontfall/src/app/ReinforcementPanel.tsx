@@ -4,12 +4,15 @@ import { reinforcementConfig } from '../shared/config/reinforcements'
 import { isPlayerUnitDefinitionUnlocked } from '../scene/systems/playerUnlocks'
 import { useState } from 'react'
 import type { EconomyState } from '../shared/types/economy'
+import type { GamePhase } from '../shared/types/game'
 import type { WaveQueueItem } from '../shared/types/reinforcements'
 import type { PlayerUnlockState } from '../shared/types/unlocks'
 
 type ReinforcementPanelProps = {
   deploymentCycle: number
   economyState: EconomyState
+  gamePhase: GamePhase
+  isInteractive: boolean
   playerUnlockState: PlayerUnlockState
   waveQueue: WaveQueueItem[]
   waveTimerSeconds: number
@@ -27,6 +30,8 @@ function formatWaveTimer(timeRemainingSeconds: number) {
 export function ReinforcementPanel({
   deploymentCycle,
   economyState,
+  gamePhase,
+  isInteractive,
   playerUnlockState,
   waveQueue,
   waveTimerSeconds,
@@ -52,11 +57,16 @@ export function ReinforcementPanel({
           {reinforcementConfig.playerUnitDefinitions.map((definition) => {
             const isUnlocked = isPlayerUnitDefinitionUnlocked(playerUnlockState, definition.id)
             const canAfford = economyState.player.manpower >= definition.cost
+            const canQueue = isInteractive && isUnlocked && canAfford
             const unlock = playerUnitUnlocks.find((entry) => entry.unitDefinitionId === definition.id)
             const requiredPoint = unlock
               ? mapConfig.controlPoints.find((point) => point.id === unlock.pointId)
               : null
-            const buttonLabel = !isUnlocked
+            const buttonLabel = !isInteractive
+              ? gamePhase === 'ready'
+                ? 'Press Start to enable'
+                : 'Match finished'
+              : !isUnlocked
               ? `Locked: capture ${requiredPoint?.label ?? 'unlock point'}`
               : canAfford
                 ? 'Unlocked'
@@ -69,7 +79,7 @@ export function ReinforcementPanel({
                     type="button"
                     className={`reinforcement-button ${isUnlocked ? '' : 'reinforcement-button-locked'}`.trim()}
                     onClick={() => onQueueUnit(definition.id)}
-                    disabled={!isUnlocked || !canAfford}
+                    disabled={!canQueue}
                   >
                     <span className="reinforcement-button-copy">
                       <span className="reinforcement-button-title">

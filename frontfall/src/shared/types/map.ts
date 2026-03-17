@@ -1,13 +1,20 @@
 export type PointType = 'resource' | 'unlock'
 
 export type MapPosition = readonly [number, number, number]
+export type BaseTeam = 'player' | 'enemy'
 
 export type ControlPointVariant = 'spire' | 'crystal' | 'relay' | 'vault'
 export type ControlPointOwner = 'neutral' | 'player' | 'enemy'
 
 export type BaseEntityData = {
   id: string
+  team: BaseTeam
   position: MapPosition
+  maxHealth: number
+}
+
+export type BaseCoreState = BaseEntityData & {
+  currentHealth: number
 }
 
 type BaseControlPointData = {
